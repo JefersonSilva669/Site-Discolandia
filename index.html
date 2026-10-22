@@ -1,0 +1,1998 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="The Hip Hop Turntable — Estante de Vinis com os sucessos de Nas e Mobb Deep integrados ao toca-discos 3D e áudio em tempo real.">
+  <title>THE HIP HOP TURNTABLE — Estante de Vinis: Nas &amp; Mobb Deep</title>
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=DM+Mono:wght@400;500&display=swap">
+
+  <!-- Three.js, Lenis, GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #030303;
+      --e1: #080807;
+      --e2: #0f0e0c;
+      --e3: #161512;
+      --e4: #201e19;
+      --ink: #f7f3eb;
+      --ink-2: rgba(247, 243, 235, 0.78);
+      --ink-3: rgba(247, 243, 235, 0.52);
+      --line: rgba(247, 243, 235, 0.12);
+      --line-2: rgba(247, 243, 235, 0.28);
+      --gold: #e5a953;
+      --gold-dark: #b87c28;
+      --amber: #d99a55;
+      --display: "Anton", Impact, sans-serif;
+      --sans: "Instrument Sans", system-ui, -apple-system, sans-serif;
+      --mono: "DM Mono", monospace;
+      --gx: clamp(24px, 5vw, 68px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      scroll-behavior: auto;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    ::selection { background: var(--gold); color: #110c04; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #070706; }
+    ::-webkit-scrollbar-thumb { background: rgba(229, 169, 83, 0.35); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+    /* Typography Utilities */
+    .disp { font-family: var(--display); text-transform: uppercase; line-height: 0.9; letter-spacing: 0.02em; }
+    .h-xl { font-size: clamp(48px, 8.5vw, 136px); }
+    .h-l  { font-size: clamp(38px, 5.5vw, 84px); }
+    .h-m  { font-size: clamp(24px, 3vw, 44px); }
+    .k    { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); font-weight: 500; }
+    .body { font-size: 16px; color: var(--ink-2); line-height: 1.7; }
+
+    /* Ambient WebGL Canvas */
+    #ambient-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+      opacity: 0.65;
+    }
+
+    /* Fixed Navigation Header */
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px var(--gx);
+      background: linear-gradient(to bottom, rgba(3,3,3,0.92) 0%, rgba(3,3,3,0.7) 70%, transparent 100%);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(247, 243, 235, 0.06);
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .vinyl-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #e5a953 0%, #151515 26%, #0a0a0a 70%, #202020 100%);
+      border: 1px solid rgba(229, 169, 83, 0.5);
+      box-shadow: 0 0 16px rgba(229, 169, 83, 0.25);
+      animation: vinylSpin 7s linear infinite paused;
+    }
+    .vinyl-badge.spinning { animation-play-state: running; }
+    @keyframes vinylSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .brand-title {
+      font-family: var(--display);
+      font-size: 20px;
+      letter-spacing: 0.08em;
+      color: var(--ink);
+    }
+    .brand-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--ink-3);
+      letter-spacing: 0.14em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    .nav-links a {
+      color: var(--ink-2);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--gold); }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .now-playing-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: rgba(229, 169, 83, 0.12);
+      border: 1px solid rgba(229, 169, 83, 0.35);
+      border-radius: 100px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--gold);
+      max-width: 320px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .audio-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+      flex: none;
+    }
+    .audio-dot.paused {
+      background: #777;
+      box-shadow: none;
+    }
+
+    #content {
+      position: relative;
+      z-index: 10;
+      padding-top: 96px;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      padding: 30px var(--gx) 50px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .hero-eyebrow {
+      margin-bottom: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px;
+      background: rgba(247, 243, 235, 0.05);
+      border: 1px solid rgba(247, 243, 235, 0.12);
+      border-radius: 100px;
+    }
+    .hero-title {
+      max-width: 1200px;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 15%, #f7f3eb 55%, #c8b090 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-desc {
+      max-width: 760px;
+      margin-bottom: 24px;
+      font-size: 17px;
+      color: var(--ink-2);
+    }
+
+    /* ======================================================== */
+    /* A ESTANTE DE VINIS (VINYL RECORD SHELF)                  */
+    /* ======================================================== */
+    .shelf-section {
+      padding: 10px var(--gx) 50px;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+    .shelf-container {
+      background: #090807;
+      border: 1px solid rgba(247, 243, 235, 0.12);
+      border-radius: 28px;
+      padding: 36px var(--gx);
+      box-shadow: 0 24px 70px rgba(0,0,0,0.85);
+      position: relative;
+    }
+    .shelf-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 32px;
+      border-bottom: 1px solid rgba(247, 243, 235, 0.08);
+      padding-bottom: 18px;
+    }
+    .shelf-title {
+      font-family: var(--display);
+      font-size: 34px;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+    .shelf-subtitle {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--gold);
+      letter-spacing: 0.14em;
+    }
+
+    /* Vinyl Rack Grid */
+    .vinyl-rack {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 36px;
+    }
+
+    .album-shelf-slot {
+      background: #0d0c0a;
+      border: 1px solid rgba(247, 243, 235, 0.09);
+      border-radius: 22px;
+      padding: 24px;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative;
+    }
+    .album-shelf-slot:hover {
+      border-color: rgba(229, 169, 83, 0.45);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+    }
+    .album-shelf-slot.active-album {
+      border-color: var(--gold);
+      background: #12100d;
+      box-shadow: 0 0 30px rgba(229, 169, 83, 0.2);
+    }
+
+    /* Sleeve + Vinyl Sliding Mechanics */
+    .sleeve-stage {
+      position: relative;
+      width: 100%;
+      height: 270px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .jacket-cover {
+      width: 240px;
+      height: 240px;
+      border-radius: 8px;
+      object-fit: cover;
+      position: relative;
+      z-index: 3;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.85);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: transform 0.4s ease;
+    }
+    .vinyl-disc-slider {
+      position: absolute;
+      width: 226px;
+      height: 226px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #111 0%, #050505 30%, #181818 60%, #000 100%);
+      box-shadow: inset 0 0 14px rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.8);
+      z-index: 2;
+      left: 70px;
+      transition: transform 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .vinyl-disc-slider::after {
+      content: "";
+      position: absolute;
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: var(--gold);
+      border: 2px solid #111;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+    }
+    .album-shelf-slot:hover .vinyl-disc-slider,
+    .album-shelf-slot.active-album .vinyl-disc-slider {
+      transform: translateX(75px) rotate(45deg);
+    }
+
+    .album-meta-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .album-name {
+      font-family: var(--display);
+      font-size: 24px;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+    .album-artist {
+      font-size: 14px;
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .album-year-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(247, 243, 235, 0.06);
+      color: var(--ink-3);
+    }
+
+    .tracklist-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 14px;
+    }
+    .track-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(247, 243, 235, 0.03);
+      border: 1px solid rgba(247, 243, 235, 0.06);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .track-row:hover {
+      background: rgba(229, 169, 83, 0.14);
+      border-color: rgba(229, 169, 83, 0.35);
+      transform: translateX(4px);
+    }
+    .track-row.now-playing {
+      background: rgba(229, 169, 83, 0.22);
+      border-color: var(--gold);
+      color: var(--gold);
+      box-shadow: 0 0 16px rgba(229, 169, 83, 0.15);
+    }
+    .track-row-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .track-play-icon {
+      font-size: 12px;
+      width: 18px;
+      text-align: center;
+      color: var(--gold);
+    }
+    .track-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .track-row.now-playing .track-title {
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .track-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--ink-3);
+    }
+
+    /* ======================================================== */
+    /* 3D TURNTABLE STAGE & REAL-TIME AUDIO CONTROLLER          */
+    /* ======================================================== */
+    .deck-stage-section {
+      padding: 10px var(--gx) 60px;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+    .deck-card {
+      background: #070706;
+      border: 1px solid rgba(247, 243, 235, 0.12);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.85);
+      position: relative;
+    }
+    .deck-canvas-container {
+      width: 100%;
+      height: 560px;
+      position: relative;
+      cursor: grab;
+      background: radial-gradient(circle at 50% 60%, #161410 0%, #060605 65%, #000000 100%);
+    }
+    .deck-canvas-container:active { cursor: grabbing; }
+    #deck-canvas { width: 100%; height: 100%; display: block; }
+
+    /* Deck HUD */
+    .deck-hud-top {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      right: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+    .hud-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--gold);
+      background: rgba(229, 169, 83, 0.12);
+      border: 1px solid rgba(229, 169, 83, 0.3);
+      padding: 4px 10px;
+      border-radius: 8px;
+      margin-top: 6px;
+    }
+    .hud-controls-right {
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+    .hud-pill {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 8px 16px;
+      background: rgba(247, 243, 235, 0.06);
+      border: 1px solid rgba(247, 243, 235, 0.14);
+      color: var(--ink-2);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .hud-pill.active {
+      background: rgba(229, 169, 83, 0.22);
+      border-color: var(--gold);
+      color: var(--gold);
+      box-shadow: 0 0 14px rgba(229, 169, 83, 0.25);
+    }
+
+    .deck-hud-bottom {
+      position: absolute;
+      bottom: 24px;
+      left: 28px;
+      right: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+    .deck-action-buttons {
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+    }
+    .deck-btn {
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .deck-btn-gold { background: var(--gold); color: #0b0803; }
+    .deck-btn-gold:hover { box-shadow: 0 0 20px rgba(229, 169, 83, 0.5); }
+    .deck-btn-dark {
+      background: rgba(247, 243, 235, 0.08);
+      color: var(--ink);
+      border: 1px solid rgba(247, 243, 235, 0.16);
+    }
+    .deck-btn-dark:hover { background: rgba(247, 243, 235, 0.14); }
+
+    .scratch-helper {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      background: rgba(4, 4, 4, 0.75);
+      border: 1px solid rgba(229, 169, 83, 0.35);
+      padding: 8px 18px;
+      border-radius: 100px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--gold);
+      letter-spacing: 0.12em;
+      backdrop-filter: blur(8px);
+      opacity: 0.85;
+    }
+
+    /* Master Player Control Strip */
+    .player-control-strip {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 24px;
+      padding: 28px;
+      background: #090908;
+      border-top: 1px solid rgba(247, 243, 235, 0.08);
+    }
+    .player-main-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .now-playing-banner {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+    .mini-jacket-thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      object-fit: cover;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.7);
+      border: 1px solid rgba(247, 243, 235, 0.15);
+      flex: none;
+    }
+    .banner-text {
+      flex: 1;
+    }
+    .banner-text h3 {
+      font-family: var(--display);
+      font-size: 24px;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+    }
+    .banner-text p {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--gold);
+    }
+
+    /* Big Master Transport Controls */
+    .transport-controls-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 4px;
+    }
+    .btn-play-master {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 28px;
+      background: var(--gold);
+      color: #0c0803;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(229, 169, 83, 0.4);
+      transition: all 0.2s;
+    }
+    .btn-play-master:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 26px rgba(229, 169, 83, 0.6);
+    }
+    .btn-transport-secondary {
+      padding: 12px 18px;
+      background: rgba(247, 243, 235, 0.08);
+      border: 1px solid rgba(247, 243, 235, 0.16);
+      border-radius: 12px;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-transport-secondary:hover {
+      background: rgba(247, 243, 235, 0.14);
+      border-color: rgba(247, 243, 235, 0.28);
+    }
+
+    .volume-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-2);
+    }
+    .vol-slider {
+      width: 90px;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    /* Scrub bar */
+    .scrub-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .time-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-3);
+      min-width: 42px;
+    }
+    .seek-slider {
+      flex: 1;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    /* Scratch buttons */
+    .scratch-pad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .scratch-pad-btn {
+      padding: 12px;
+      background: #14120e;
+      border: 1px solid rgba(229, 169, 83, 0.25);
+      border-radius: 10px;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .scratch-pad-btn:active {
+      transform: scale(0.96);
+      background: var(--gold);
+      color: #0e0a03;
+      box-shadow: 0 0 20px rgba(229, 169, 83, 0.6);
+    }
+
+    /* Status Notification Bar */
+    .status-msg-banner {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--gold);
+      background: rgba(229, 169, 83, 0.08);
+      border: 1px solid rgba(229, 169, 83, 0.2);
+      padding: 6px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Spectrum VU Meter */
+    .vu-meter-card {
+      background: #0d0c0a;
+      border: 1px solid rgba(247, 243, 235, 0.08);
+      border-radius: 20px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .spectrum-container {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      height: 120px;
+      padding: 12px 14px;
+      background: #050504;
+      border-radius: 12px;
+      border: 1px solid rgba(247, 243, 235, 0.05);
+      margin: 12px 0;
+    }
+    .spectrum-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .spectrum-bar {
+      width: 22px;
+      height: 10px;
+      background: linear-gradient(180deg, var(--gold) 0%, rgba(229, 169, 83, 0.3) 100%);
+      border-radius: 3px;
+      transition: height 0.04s ease;
+      box-shadow: 0 0 8px rgba(229, 169, 83, 0.25);
+    }
+    .spectrum-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--ink-3);
+    }
+
+    /* Editorial Chapters */
+    .chapter-section {
+      padding: 80px var(--gx);
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+    .chapter-header { margin-bottom: 40px; }
+    .chapter-num {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--gold);
+      letter-spacing: 0.2em;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .chapter-title {
+      font-family: var(--display);
+      font-size: clamp(34px, 5vw, 76px);
+      line-height: 0.95;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .chapter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .chapter-body p {
+      margin-bottom: 18px;
+      font-size: 16px;
+      color: var(--ink-2);
+      line-height: 1.8;
+    }
+    .chapter-highlight {
+      padding: 32px;
+      background: #0c0b0a;
+      border: 1px solid rgba(247, 243, 235, 0.1);
+      border-radius: 24px;
+    }
+    .quote-mark {
+      font-family: var(--display);
+      font-size: 68px;
+      color: var(--gold);
+      line-height: 0.5;
+      margin-bottom: 14px;
+      opacity: 0.4;
+    }
+    .quote-text {
+      font-size: 18px;
+      font-style: italic;
+      color: var(--ink);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .quote-author {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--gold);
+      letter-spacing: 0.12em;
+    }
+
+    /* Footer */
+    #footer {
+      border-top: 1px solid rgba(247, 243, 235, 0.08);
+      padding: 60px var(--gx);
+      text-align: center;
+      background: #020202;
+    }
+
+    @media (max-width: 900px) {
+      .player-control-strip { grid-template-columns: 1fr; }
+      .chapter-grid { grid-template-columns: 1fr; }
+      .deck-canvas-container { height: 420px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Halftone Dots Canvas -->
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Navigation Header -->
+  <header id="header">
+    <a href="#" class="brand-group">
+      <div id="vinylBadge" class="vinyl-badge"></div>
+      <div>
+        <div class="brand-title">HIP HOP TURNTABLE</div>
+        <div class="brand-sub">ESTANTE DE VINIS &bull; NAS &amp; MOBB DEEP</div>
+      </div>
+    </a>
+
+    <nav class="nav-links">
+      <a href="#estante-vinis">Estante de Álbuns</a>
+      <a href="#deck-interactive">Toca-Discos 3D</a>
+      <a href="#origem-bronx">Bronx 1973</a>
+      <a href="#queensbridge">Queensbridge Sound</a>
+      <a href="#quick-mix">Quick-Mix</a>
+    </nav>
+
+    <div class="header-actions">
+      <div id="nowPlayingPill" class="now-playing-pill">
+        <span id="audioDot" class="audio-dot paused"></span>
+        <span id="headerTrackTitle">PRONTO PARA TOCAR</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div id="content">
+
+    <!-- HERO SECTION -->
+    <section class="hero-section">
+      <div class="hero-eyebrow">
+        <span class="k">FECAP &bull; PROJETO ROSSETTI &bull; QUEENSBRIDGE CLASSICS</span>
+      </div>
+      <h1 class="disp hero-title h-xl">
+        ESTANTE DE VINIS<br>NAS &amp; MOBB DEEP
+      </h1>
+      <p class="body hero-desc">
+        Explore a coleção definitiva de vinis que consagrou a Era de Ouro do Hip Hop. Escolha o álbum na estante abaixo, selecione a música e aperte o play para rodar no toca-discos 3D com áudio de alta fidelidade!
+      </p>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- ESTANTE DE VINIS (VINYL SHELF)                           -->
+    <!-- ======================================================== -->
+    <section id="estante-vinis" class="shelf-section">
+      <div class="shelf-container">
+        
+        <div class="shelf-header">
+          <div>
+            <span class="shelf-subtitle">&bull; COLEÇÃO DE VINIL NA ESTANTE &bull;</span>
+            <h2 class="shelf-title">SELECIONE O ÁLBUM &amp; O DISCO</h2>
+          </div>
+          <div style="font-family: var(--mono); font-size: 12px; color: var(--gold);">
+            &#9654; Clique em qualquer faixa abaixo para carregar no Toca-Discos
+          </div>
+        </div>
+
+        <div class="vinyl-rack">
+          
+          <!-- ALBUM 1: NAS - ILLMATIC & CLASSICS -->
+          <div class="album-shelf-slot active-album" id="slotNas" data-album="nas">
+            <div class="sleeve-stage" onclick="loadAlbum('nas')">
+              <img id="coverNas" class="jacket-cover" src="albun/R-226816-1450955646-4170.jpg" alt="Nas Illmatic Album Cover" onerror="this.src='../albun/R-226816-1450955646-4170.jpg'">
+              <div class="vinyl-disc-slider"></div>
+            </div>
+
+            <div class="album-meta-header">
+              <div>
+                <h3 class="album-name">ILLMATIC &amp; CLASSICS</h3>
+                <div class="album-artist">NAS</div>
+              </div>
+              <span class="album-year-badge">1994 &bull; COLUMBIA</span>
+            </div>
+
+            <div class="tracklist-box">
+              <div class="track-row now-playing" data-file="Nas - The World Is Yours.mp3" data-title="The World Is Yours" data-artist="Nas" data-album="Illmatic (1994)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">1. The World Is Yours</span>
+                </div>
+                <span class="track-badge">Prod. Pete Rock</span>
+              </div>
+
+              <div class="track-row" data-file="Nas - It Ain't Hard to Tell.mp3" data-title="It Ain't Hard to Tell" data-artist="Nas" data-album="Illmatic (1994)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">2. It Ain't Hard to Tell</span>
+                </div>
+                <span class="track-badge">Prod. Large Professor</span>
+              </div>
+
+              <div class="track-row" data-file="Nas - I Gave You Power.mp3" data-title="I Gave You Power" data-artist="Nas" data-album="It Was Written (1996)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">3. I Gave You Power</span>
+                </div>
+                <span class="track-badge">Prod. DJ Premier</span>
+              </div>
+
+              <div class="track-row" data-file="Nas - Shootouts.mp3" data-title="Shootouts" data-artist="Nas" data-album="It Was Written (1996)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">4. Shootouts</span>
+                </div>
+                <span class="track-badge">Prod. Trackmasters</span>
+              </div>
+
+              <div class="track-row" data-file="Nas - Nas Is Like.mp3" data-title="Nas Is Like" data-artist="Nas" data-album="I Am... (1999)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">5. Nas Is Like</span>
+                </div>
+                <span class="track-badge">Prod. DJ Premier</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ALBUM 2: MOBB DEEP - THE INFAMOUS -->
+          <div class="album-shelf-slot" id="slotMobb" data-album="mobb">
+            <div class="sleeve-stage" onclick="loadAlbum('mobb')">
+              <img id="coverMobb" class="jacket-cover" src="albun/Mobbdeeptheinfamous1995.jpg" alt="Mobb Deep The Infamous Cover" onerror="this.src='../albun/Mobbdeeptheinfamous1995.jpg'">
+              <div class="vinyl-disc-slider"></div>
+            </div>
+
+            <div class="album-meta-header">
+              <div>
+                <h3 class="album-name">THE INFAMOUS</h3>
+                <div class="album-artist">MOBB DEEP</div>
+              </div>
+              <span class="album-year-badge">1995 &bull; LOUD / RCA</span>
+            </div>
+
+            <div class="tracklist-box">
+              <div class="track-row" data-file="Mobb Deep - Survival of the Fittest.mp3" data-title="Survival of the Fittest" data-artist="Mobb Deep" data-album="The Infamous (1995)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">1. Survival of the Fittest</span>
+                </div>
+                <span class="track-badge">Prod. Havoc</span>
+              </div>
+
+              <div class="track-row" data-file="Mobb Deep - Eye for a Eye (Your Beef Is Mines).mp3" data-title="Eye for a Eye (Your Beef Is Mines)" data-artist="Mobb Deep ft. Nas & Raekwon" data-album="The Infamous (1995)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">2. Eye for a Eye (ft. Nas)</span>
+                </div>
+                <span class="track-badge">Prod. Havoc</span>
+              </div>
+
+              <div class="track-row" data-file="Mobb Deep - Give Up the Goods (Just Step).mp3" data-title="Give Up the Goods (Just Step)" data-artist="Mobb Deep" data-album="The Infamous (1995)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">3. Give Up the Goods</span>
+                </div>
+                <span class="track-badge">Prod. Q-Tip</span>
+              </div>
+
+              <div class="track-row" data-file="Mobb Deep - Up North Trip.mp3" data-title="Up North Trip" data-artist="Mobb Deep" data-album="The Infamous (1995)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">4. Up North Trip</span>
+                </div>
+                <span class="track-badge">Prod. Havoc</span>
+              </div>
+
+              <div class="track-row" data-file="Mobb Deep - Q.U. - Hectic.mp3" data-title="Q.U. - Hectic" data-artist="Mobb Deep" data-album="The Infamous (1995)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">5. Q.U. - Hectic</span>
+                </div>
+                <span class="track-badge">Prod. Havoc</span>
+              </div>
+
+              <div class="track-row" data-file="Mobb Deep - The Start of Your Ending (41st Side).mp3" data-title="The Start of Your Ending (41st Side)" data-artist="Mobb Deep" data-album="The Infamous (1995)" onclick="playTrack(this)">
+                <div class="track-row-left">
+                  <span class="track-play-icon">&#9658;</span>
+                  <span class="track-title">6. The Start of Your Ending</span>
+                </div>
+                <span class="track-badge">Prod. Havoc</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 3D TURNTABLE STAGE & AUDIO PLAYER CONTROLS               -->
+    <!-- ======================================================== -->
+    <section id="deck-interactive" class="deck-stage-section">
+      <div class="deck-card">
+        
+        <!-- 3D WebGL Canvas Container -->
+        <div class="deck-canvas-container" id="deckContainer">
+          <canvas id="deck-canvas"></canvas>
+          
+          <div id="scratchHelper" class="scratch-helper">
+            &#9737; ARRASTE O VINIL EM 3D PARA FAZER SCRATCH &bull; CLIQUE NOS BOTÕES
+          </div>
+
+          <!-- Top HUD Overlay -->
+          <div class="deck-hud-top">
+            <div>
+              <span class="k" style="font-size: 12px; color: var(--gold);">TOCA-DISCOS DJ 3D &bull; TECHNICS HYBRID</span>
+              <div class="hud-chip">
+                <span>&#11044;</span> <span id="hudRpmText">33 &#8531; RPM &bull; TORQUE ATIVO</span>
+              </div>
+            </div>
+
+            <div class="hud-controls-right">
+              <button id="pill33" class="hud-pill active">33 &#8531; RPM</button>
+              <button id="pill45" class="hud-pill">45 RPM</button>
+            </div>
+          </div>
+
+          <!-- Bottom HUD Overlay -->
+          <div class="deck-hud-bottom">
+            <div class="deck-action-buttons">
+              <button id="btnPlatterPower" class="deck-btn deck-btn-gold">
+                <span id="powerIcon">&#9632;</span>
+                <span id="powerText">PARAR PRATO</span>
+              </button>
+              <button id="btnTonearm" class="deck-btn deck-btn-dark">
+                <span>&#10506;</span> LEVANTAR BRAÇO
+              </button>
+              <button id="btnResetCamera" class="deck-btn deck-btn-dark">
+                <span>&#8635;</span> RESETAR CÂMERA
+              </button>
+            </div>
+
+            <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-3);">
+              WebGL2 &bull; Three.js &bull; Drag to Orbit
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Player Strip -->
+        <div class="player-control-strip">
+          
+          <!-- Left: Track info + Scrub bar + Scratch pads -->
+          <div class="player-main-col">
+            <div class="now-playing-banner">
+              <img id="playerThumb" class="mini-jacket-thumb" src="albun/R-226816-1450955646-4170.jpg" alt="Cover" onerror="this.src='../albun/R-226816-1450955646-4170.jpg'">
+              <div class="banner-text">
+                <h3 id="currentSongTitle">The World Is Yours</h3>
+                <p id="currentArtistInfo">Nas &bull; Illmatic (1994)</p>
+              </div>
+            </div>
+
+            <!-- Big Master Transport Controls -->
+            <div class="transport-controls-row">
+              <button id="btnPlayMaster" class="btn-play-master" onclick="togglePlayPause()">
+                <span id="masterPlayIcon">&#9658;</span>
+                <span id="masterPlayText">TOCAR MÚSICA</span>
+              </button>
+              <button id="btnNextTrack" class="btn-transport-secondary" onclick="playNextTrack()">
+                &#9197; PRÓXIMA
+              </button>
+
+              <div class="volume-group">
+                <span>VOLUME</span>
+                <input type="range" id="volSlider" class="vol-slider" min="0" max="100" value="85">
+              </div>
+            </div>
+
+            <!-- Status indicator line -->
+            <div id="statusMsgBanner" class="status-msg-banner">
+              <span id="statusMsgText">Pronto para reproduzir. Clique em "TOCAR MÚSICA" ou em uma faixa da estante.</span>
+              <span id="audioEngineTypeBadge">ÁUDIO DIRETO ATIVO</span>
+            </div>
+
+            <!-- Audio Scrub Bar -->
+            <div class="scrub-container">
+              <span id="currTime" class="time-label">0:00</span>
+              <input type="range" id="seekSlider" class="seek-slider" min="0" max="100" value="0" step="0.1">
+              <span id="totTime" class="time-label">0:00</span>
+            </div>
+
+            <!-- Scratch Pads -->
+            <div>
+              <span class="k">PADS DE SCRATCH INSTANTÂNEO</span>
+              <div class="scratch-pad-grid">
+                <button class="scratch-pad-btn" data-scratch="baby">
+                  <span>&#9835;</span> <strong>BABY SCRATCH</strong>
+                </button>
+                <button class="scratch-pad-btn" data-scratch="chirp">
+                  <span>&#9835;&#9835;</span> <strong>CHIRP SCRATCH</strong>
+                </button>
+                <button class="scratch-pad-btn" data-scratch="transformer">
+                  <span>&#9889;</span> <strong>TRANSFORMER</strong>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Real-time VU Meter & Crackle -->
+          <div class="vu-meter-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="k">ESPECTRO DE FREQUÊNCIAS (FFT)</span>
+              <span id="vuStateBadge" style="font-family: var(--mono); font-size: 10px; color: var(--gold); padding: 2px 8px; background: rgba(229, 169, 83, 0.15); border-radius: 6px;">STANDBY</span>
+            </div>
+
+            <div class="spectrum-container">
+              <div class="spectrum-col">
+                <div id="specBar0" class="spectrum-bar"></div>
+                <span class="spectrum-label">SUB</span>
+              </div>
+              <div class="spectrum-col">
+                <div id="specBar1" class="spectrum-bar"></div>
+                <span class="spectrum-label">BASS</span>
+              </div>
+              <div class="spectrum-col">
+                <div id="specBar2" class="spectrum-bar"></div>
+                <span class="spectrum-label">LOW-MID</span>
+              </div>
+              <div class="spectrum-col">
+                <div id="specBar3" class="spectrum-bar"></div>
+                <span class="spectrum-label">MID</span>
+              </div>
+              <div class="spectrum-col">
+                <div id="specBar4" class="spectrum-bar"></div>
+                <span class="spectrum-label">HIGH</span>
+              </div>
+              <div class="spectrum-col">
+                <div id="specBar5" class="spectrum-bar"></div>
+                <span class="spectrum-label">AIR</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--ink-2);">
+                <span>Volume de Crackle / Superfície</span>
+                <span id="crackleLabel" style="color: var(--gold);">40%</span>
+              </div>
+              <input type="range" id="sliderCrackleVol" min="0" max="100" value="40" style="accent-color: var(--gold); cursor: pointer;">
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- HISTORICAL CHAPTERS -->
+    <section id="origem-bronx" class="chapter-section">
+      <div class="chapter-header">
+        <span class="chapter-num">CAPÍTULO 01</span>
+        <h2 class="chapter-title">O NASCIMENTO NO BRONX (1973)</h2>
+      </div>
+
+      <div class="chapter-grid">
+        <div class="chapter-body">
+          <p>
+            No dia 11 de agosto de 1973, em uma festa comunitária no número 1520 da Sedgwick Avenue, no oeste do Bronx, o imigrante jamaicano Clive Campbell — conhecido como <strong>DJ Kool Herc</strong> — inaugurou a técnica que revolucionou a música contemporânea.
+          </p>
+          <p>
+            Herc percebeu que o ápice da energia na pista ocorria durante a seção rítmica desprovida de vocais: o <em>break</em> de bateria. Utilizando <strong>dois toca-discos</strong> com duas cópias do mesmo vinil, Herc passava de um para o outro assim que o break terminava, repetindo a seção indefinidamente.
+          </p>
+          <p>
+            Essa técnica, a <strong>Merry-Go-Round</strong>, criou o alicerce para que os MCs rimassem e os B-Boys dançassem. O toca-discos deixou de ser uma vitrola passiva e se tornou um instrumento de composição ao vivo.
+          </p>
+        </div>
+
+        <div class="chapter-highlight">
+          <div class="quote-mark">&ldquo;</div>
+          <div class="quote-text">
+            Eu vi que as pessoas esperavam pelo break. Então decidi: vou juntar esses breaks um atrás do outro sem parar. E a pista explodiu.
+          </div>
+          <div class="quote-author">DJ KOOL HERC &bull; PAI FUNDADOR DO HIP HOP</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="queensbridge" class="chapter-section">
+      <div class="chapter-header">
+        <span class="chapter-num">CAPÍTULO 02</span>
+        <h2 class="chapter-title">O SOM DE QUEENSBRIDGE &bull; NAS &amp; MOBB DEEP</h2>
+      </div>
+
+      <div class="chapter-grid">
+        <div class="chapter-highlight">
+          <div class="quote-mark">&ldquo;</div>
+          <div class="quote-text">
+            Em Queensbridge, o vinil era a nossa fuga e o nosso jornal. Havoc no MPC e no toca-discos criando aquelas batidas sombrias de piano, enquanto Prodigy e Nas documentavam a sobrevivência na selva de concreto.
+          </div>
+          <div class="quote-author">THE QUEENSBRIDGE CHRONICLES (1994-1995)</div>
+        </div>
+
+        <div class="chapter-body">
+          <p>
+            Nos conjuntos habitacionais de <strong>Queensbridge</strong>, em Nova York, o Hip Hop atingiu o ápice de sua sofisticação lírica e textural entre 1994 e 1995 com <em>Illmatic</em> (Nas) e <em>The Infamous</em> (Mobb Deep).
+          </p>
+          <p>
+            Produtores lendários como <strong>Large Professor, Pete Rock, DJ Premier e Q-Tip</strong> escavaram amostras raras de vinil de jazz, soul e funk dos anos 60 e 70 para criar colagens sonoras imortais.
+          </p>
+          <p>
+            A faixa <strong>"Eye for a Eye (Your Beef Is Mines)"</strong> eternizou essa irmandade musical, unindo Prodigy, Havoc e Nas sobre uma atmosfera densa e crua que definiu o verdadeiro som de rua da Costa Leste.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="quick-mix" class="chapter-section">
+      <div class="chapter-header">
+        <span class="chapter-num">CAPÍTULO 03</span>
+        <h2 class="chapter-title">A CIÊNCIA DO QUICK-MIX &amp; O SLIPMAT</h2>
+      </div>
+
+      <div class="chapter-grid">
+        <div class="chapter-body">
+          <p>
+            Se Kool Herc foi o visionário que teve a ideia do break, <strong>Grandmaster Flash</strong> foi o engenheiro e cientista que transformou a técnica em método rigoroso com a <em>Quick-Mix Theory</em>.
+          </p>
+          <p>
+            Flash inventou o <strong>slipmat</strong> (o feltro colocado entre o prato e o vinil). Até então, segurar o vinil parava o motor da vitrola. Com o slipmat, o prato gira livremente enquanto o DJ segura o vinil e o solta milimetricamente no tempo exato da batida.
+          </p>
+        </div>
+
+        <div class="chapter-highlight">
+          <div class="quote-mark">&ldquo;</div>
+          <div class="quote-text">
+            Eu precisava ver o som antes de ouvi-lo. Usei giz para marcar o início exato do primeiro bumbo no sulco do vinil. O toca-discos virou uma máquina de precisão cirúrgica.
+          </div>
+          <div class="quote-author">GRANDMASTER FLASH &bull; CIENTISTA DO HIP HOP</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer id="footer">
+      <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; align-items: center;">
+        <span class="k" style="letter-spacing: 0.22em;">PROJETO ACADÊMICO &bull; FECAP</span>
+        <h4 class="disp" style="font-size: 28px; color: var(--ink);">THE HIP HOP TURNTABLE</h4>
+        <p style="font-size: 14px; color: var(--ink-3);">
+          Desenvolvido com Three.js, Web Audio API, shaders WebGL procedurais e Lenis Scroll. Projeto de tecnologia e cultura para a disciplina do Prof. Rossetti.
+        </p>
+        <span style="font-family: var(--mono); font-size: 11px; color: var(--gold); margin-top: 10px;">
+          &copy; 2026 Thiago Barros &bull; FECAP &bull; Rossetti
+        </span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Audio Element (Direct Native Output, NO crossorigin to prevent file:// CORS blocks) -->
+  <audio id="audioPlayer" preload="auto"></audio>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT: 3D TURNTABLE + SHELF LOGIC + ROCK-SOLID AUDIO + VU METER      -->
+  <!-- ========================================================================= -->
+  <script>
+    // -------------------------------------------------------------------------
+    // 1. Lenis Smooth Scroll
+    // -------------------------------------------------------------------------
+    if (typeof Lenis !== 'undefined') {
+      const lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true
+      });
+      function raf(time) {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+      }
+      requestAnimationFrame(raf);
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Ambient WebGL Halftone Dot Canvas
+    // -------------------------------------------------------------------------
+    (() => {
+      const canvas = document.getElementById('ambient-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let mouse = { x: -1000, y: -1000 };
+      let t = 0;
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      window.addEventListener('mousemove', e => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+      });
+
+      function draw() {
+        requestAnimationFrame(draw);
+        t += 0.015;
+
+        ctx.fillStyle = '#030303';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const spacing = 34;
+        const cols = Math.ceil(canvas.width / spacing) + 1;
+        const rows = Math.ceil(canvas.height / spacing) + 1;
+
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const px = x * spacing;
+            const py = y * spacing;
+
+            const dx = px - mouse.x;
+            const dy = py - mouse.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            const wave = Math.sin(x * 0.12 + y * 0.12 + t) * 0.5 + 0.5;
+            let radius = 1.0 + wave * 1.5;
+
+            if (dist < 260) {
+              const boost = (1 - dist / 260);
+              radius += boost * 4.5;
+            }
+
+            ctx.beginPath();
+            ctx.arc(px, py, radius, 0, Math.PI * 2);
+            ctx.fillStyle = dist < 260 ? 'rgba(229, 169, 83, 0.45)' : 'rgba(229, 169, 83, 0.12)';
+            ctx.fill();
+          }
+        }
+      }
+      draw();
+    })();
+
+    // -------------------------------------------------------------------------
+    // 3. Three.js Interactive 3D Turntable (Technics DJ Hybrid Model)
+    // -------------------------------------------------------------------------
+    let deckState = {
+      rotating: false,
+      rpm: 33.33,
+      targetSpeed: 0.025,
+      currentSpeed: 0,
+      tonearmOnRecord: false,
+      targetArmY: 0.0,
+      currentArmY: 0.0,
+      scratching: false
+    };
+
+    const container = document.getElementById('deckContainer');
+    const canvas3d = document.getElementById('deck-canvas');
+
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(34, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(0, 4.4, 5.6);
+    camera.lookAt(0, -0.15, 0);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const goldKeyLight = new THREE.DirectionalLight(0xffe8ba, 2.6);
+    goldKeyLight.position.set(4, 7, 5);
+    goldKeyLight.castShadow = true;
+    goldKeyLight.shadow.mapSize.width = 1024;
+    goldKeyLight.shadow.mapSize.height = 1024;
+    scene.add(goldKeyLight);
+
+    const rimLight = new THREE.DirectionalLight(0xe5a953, 1.4);
+    rimLight.position.set(-6, 3, -4);
+    scene.add(rimLight);
+
+    const deckGroup = new THREE.Group();
+    scene.add(deckGroup);
+
+    // 1. Plinth
+    const plinthGeo = new THREE.BoxGeometry(4.6, 0.44, 3.6);
+    const plinthMat = new THREE.MeshStandardMaterial({
+      color: 0x141414,
+      metalness: 0.45,
+      roughness: 0.35
+    });
+    const plinth = new THREE.Mesh(plinthGeo, plinthMat);
+    plinth.position.y = -0.22;
+    plinth.receiveShadow = true;
+    plinth.castShadow = true;
+    deckGroup.add(plinth);
+
+    // Gold Trim accent border
+    const trimGeo = new THREE.BoxGeometry(4.64, 0.04, 3.64);
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0xe5a953, metalness: 0.85, roughness: 0.2 });
+    const trim = new THREE.Mesh(trimGeo, trimMat);
+    trim.position.y = -0.01;
+    deckGroup.add(trim);
+
+    // 2. Sub-platter ring
+    const subPlatterGeo = new THREE.CylinderGeometry(1.72, 1.72, 0.16, 64);
+    const subPlatterMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 });
+    const subPlatter = new THREE.Mesh(subPlatterGeo, subPlatterMat);
+    subPlatter.position.set(-0.68, 0.08, 0.08);
+    deckGroup.add(subPlatter);
+
+    // 3. Rotating Platter & Vinyl Group
+    const platterGroup = new THREE.Group();
+    platterGroup.position.set(-0.68, 0.17, 0.08);
+    deckGroup.add(platterGroup);
+
+    // Vinyl Record
+    const vinylGeo = new THREE.CylinderGeometry(1.64, 1.64, 0.04, 64);
+    const vinylMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0a0a,
+      metalness: 0.4,
+      roughness: 0.22
+    });
+    const vinylMesh = new THREE.Mesh(vinylGeo, vinylMat);
+    vinylMesh.castShadow = true;
+    platterGroup.add(vinylMesh);
+
+    // Grooves ring
+    const grooveGeo = new THREE.RingGeometry(0.7, 1.58, 64);
+    grooveGeo.rotateX(-Math.PI / 2);
+    const grooveMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.5, metalness: 0.2 });
+    const grooveMesh = new THREE.Mesh(grooveGeo, grooveMat);
+    grooveMesh.position.y = 0.021;
+    platterGroup.add(grooveMesh);
+
+    // Center Gold Label
+    const labelGeo = new THREE.CylinderGeometry(0.56, 0.56, 0.045, 32);
+    const labelMat = new THREE.MeshStandardMaterial({ color: 0xe5a953, metalness: 0.2, roughness: 0.4 });
+    const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+    labelMesh.position.y = 0.005;
+    platterGroup.add(labelMesh);
+
+    // Spindle
+    const spindleGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.24, 16);
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.95, roughness: 0.1 });
+    const spindle = new THREE.Mesh(spindleGeo, chromeMat);
+    spindle.position.set(-0.68, 0.22, 0.08);
+    deckGroup.add(spindle);
+
+    // 4. Strobe light pillar
+    const strobeGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.28, 16);
+    const strobeMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
+    const strobe = new THREE.Mesh(strobeGeo, strobeMat);
+    strobe.position.set(-2.0, 0.14, 1.45);
+    deckGroup.add(strobe);
+
+    const strobeLight = new THREE.PointLight(0xe5a953, 1.2, 2.5);
+    strobeLight.position.set(-2.0, 0.3, 1.45);
+    deckGroup.add(strobeLight);
+
+    // 5. Start/Stop Power Button
+    const startBtnGeo = new THREE.CylinderGeometry(0.2, 0.22, 0.1, 32);
+    const startBtn = new THREE.Mesh(startBtnGeo, chromeMat);
+    startBtn.position.set(-2.0, 0.04, 1.15);
+    deckGroup.add(startBtn);
+
+    // 6. Pitch Fader Slider
+    const pitchBaseGeo = new THREE.BoxGeometry(0.24, 0.04, 1.4);
+    const pitchBaseMat = new THREE.MeshStandardMaterial({ color: 0x1f1f1f, metalness: 0.6 });
+    const pitchBase = new THREE.Mesh(pitchBaseGeo, pitchBaseMat);
+    pitchBase.position.set(1.75, 0.02, 0.6);
+    deckGroup.add(pitchBase);
+
+    const pitchKnobGeo = new THREE.BoxGeometry(0.14, 0.12, 0.1);
+    const pitchKnob = new THREE.Mesh(pitchKnobGeo, chromeMat);
+    pitchKnob.position.set(1.75, 0.07, 0.6);
+    deckGroup.add(pitchKnob);
+
+    // 7. Tonearm Assembly
+    const armBaseGeo = new THREE.CylinderGeometry(0.28, 0.32, 0.24, 32);
+    const armBase = new THREE.Mesh(armBaseGeo, chromeMat);
+    armBase.position.set(1.45, 0.12, -0.75);
+    deckGroup.add(armBase);
+
+    const tonearmGroup = new THREE.Group();
+    tonearmGroup.position.set(1.45, 0.26, -0.75);
+    deckGroup.add(tonearmGroup);
+
+    const counterGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.28, 32);
+    counterGeo.rotateX(Math.PI / 2);
+    const counterMesh = new THREE.Mesh(counterGeo, plinthMat);
+    counterMesh.position.set(0, 0, -0.36);
+    tonearmGroup.add(counterMesh);
+
+    const armPipeGeo = new THREE.CylinderGeometry(0.028, 0.028, 2.4, 16);
+    armPipeGeo.rotateX(Math.PI / 2);
+    const armPipe = new THREE.Mesh(armPipeGeo, chromeMat);
+    armPipe.position.set(0, 0, 0.9);
+    tonearmGroup.add(armPipe);
+
+    const headshellGeo = new THREE.BoxGeometry(0.1, 0.06, 0.3);
+    const headshellMat = new THREE.MeshStandardMaterial({ color: 0xe5a953, metalness: 0.5, roughness: 0.3 });
+    const headshell = new THREE.Mesh(headshellGeo, headshellMat);
+    headshell.position.set(-0.06, -0.04, 2.1);
+    headshell.rotation.y = 0.26;
+    tonearmGroup.add(headshell);
+
+    // Mouse drag for 3D Orbit & Scratching
+    let isMouseDown = false;
+    let prevMouse = { x: 0, y: 0 };
+    let orbitAngles = { x: 0, y: 0 };
+    const scratchHelper = document.getElementById('scratchHelper');
+
+    canvas3d.addEventListener('mousedown', e => {
+      isMouseDown = true;
+      prevMouse = { x: e.clientX, y: e.clientY };
+
+      const rect = canvas3d.getBoundingClientRect();
+      const mouseVec = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouseVec, camera);
+      const hits = raycaster.intersectObject(vinylMesh);
+
+      if (hits.length > 0) {
+        deckState.scratching = true;
+        if (scratchHelper) scratchHelper.style.opacity = '1';
+        triggerScratchSound(0.3);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+      deckState.scratching = false;
+      if (scratchHelper) scratchHelper.style.opacity = '0.5';
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!isMouseDown) return;
+      const dx = e.clientX - prevMouse.x;
+      const dy = e.clientY - prevMouse.y;
+      prevMouse = { x: e.clientX, y: e.clientY };
+
+      if (deckState.scratching) {
+        platterGroup.rotation.y += dx * 0.035;
+        triggerScratchSound(Math.abs(dx) * 0.05);
+      } else {
+        orbitAngles.y += dx * 0.007;
+        orbitAngles.x = Math.max(-0.4, Math.min(0.55, orbitAngles.x + dy * 0.007));
+        deckGroup.rotation.y = orbitAngles.y;
+        deckGroup.rotation.x = orbitAngles.x;
+      }
+    });
+
+    document.getElementById('btnResetCamera')?.addEventListener('click', () => {
+      orbitAngles = { x: 0, y: 0 };
+      deckGroup.rotation.set(0, 0, 0);
+    });
+
+    const btnPlatter = document.getElementById('btnPlatterPower');
+    const powerText = document.getElementById('powerText');
+    const powerIcon = document.getElementById('powerIcon');
+    const vinylBadge = document.getElementById('vinylBadge');
+
+    btnPlatter?.addEventListener('click', togglePlayPause);
+
+    const btnArm = document.getElementById('btnTonearm');
+    btnArm?.addEventListener('click', () => {
+      deckState.tonearmOnRecord = !deckState.tonearmOnRecord;
+      btnArm.innerHTML = deckState.tonearmOnRecord ? '<span>&#10506;</span> LEVANTAR BRAÇO' : '<span>&#10507;</span> POUSAR NO VINIL';
+      deckState.targetArmY = deckState.tonearmOnRecord ? 0.44 : 0.0;
+      if (deckState.tonearmOnRecord) {
+        triggerNeedleDropSound();
+        if (audioPlayer.paused) audioPlayer.play();
+      } else {
+        audioPlayer.pause();
+      }
+    });
+
+    const pill33 = document.getElementById('pill33');
+    const pill45 = document.getElementById('pill45');
+    const hudRpmText = document.getElementById('hudRpmText');
+
+    pill33?.addEventListener('click', () => {
+      deckState.rpm = 33.33;
+      deckState.targetSpeed = 0.025;
+      pill33.classList.add('active');
+      pill45.classList.remove('active');
+      hudRpmText.textContent = '33 ⅓ RPM • TORQUE ATIVO';
+      setAudioPlaybackRate(1.0);
+    });
+
+    pill45?.addEventListener('click', () => {
+      deckState.rpm = 45.0;
+      deckState.targetSpeed = 0.038;
+      pill45.classList.add('active');
+      pill33.classList.remove('active');
+      hudRpmText.textContent = '45 RPM (+35% PITCH) • TORQUE ATIVO';
+      setAudioPlaybackRate(1.35);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!deckState.scratching) {
+        deckState.currentSpeed += ((deckState.rotating ? deckState.targetSpeed : 0) - deckState.currentSpeed) * 0.06;
+        platterGroup.rotation.y += deckState.currentSpeed;
+      }
+
+      deckState.currentArmY += (deckState.targetArmY - deckState.currentArmY) * 0.08;
+      tonearmGroup.rotation.y = deckState.currentArmY;
+      tonearmGroup.rotation.x = deckState.tonearmOnRecord ? 0.0 : -0.06;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      if (!container || !renderer) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // -------------------------------------------------------------------------
+    // 4. ROCK-SOLID AUDIO SYSTEM & SHELF INTEGRATION
+    // -------------------------------------------------------------------------
+    const audioPlayer = document.getElementById('audioPlayer');
+    let audioCtx = null;
+    let crackleGainNode = null;
+    let currentTrackElement = null;
+
+    const playerThumb = document.getElementById('playerThumb');
+    const currentSongTitle = document.getElementById('currentSongTitle');
+    const currentArtistInfo = document.getElementById('currentArtistInfo');
+    const headerTrackTitle = document.getElementById('headerTrackTitle');
+    const audioDot = document.getElementById('audioDot');
+    const seekSlider = document.getElementById('seekSlider');
+    const currTime = document.getElementById('currTime');
+    const totTime = document.getElementById('totTime');
+    const masterPlayIcon = document.getElementById('masterPlayIcon');
+    const masterPlayText = document.getElementById('masterPlayText');
+    const statusMsgText = document.getElementById('statusMsgText');
+    const vuStateBadge = document.getElementById('vuStateBadge');
+    const volSlider = document.getElementById('volSlider');
+
+    // Volume Slider
+    volSlider.addEventListener('input', e => {
+      audioPlayer.volume = e.target.value / 100;
+    });
+
+    // Initialize Web Audio for sound effects & crackle
+    function initWebAudio() {
+      if (audioCtx) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+
+        // Procedural vinyl surface crackle
+        const bufLen = audioCtx.sampleRate * 2;
+        const noiseBuf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+        const out = noiseBuf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) {
+          const r = Math.random();
+          if (r > 0.998) out[i] = (Math.random() * 2 - 1) * 0.85;
+          else if (r > 0.985) out[i] = (Math.random() * 2 - 1) * 0.18;
+          else out[i] = (Math.random() * 2 - 1) * 0.015;
+        }
+        const crackleSrc = audioCtx.createBufferSource();
+        crackleSrc.buffer = noiseBuf;
+        crackleSrc.loop = true;
+
+        const hp = audioCtx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 1000;
+
+        crackleGainNode = audioCtx.createGain();
+        crackleGainNode.gain.value = 0.4;
+
+        crackleSrc.connect(hp);
+        hp.connect(crackleGainNode);
+        crackleGainNode.connect(audioCtx.destination);
+        crackleSrc.start();
+      } catch (err) {
+        console.warn('Web Audio not supported or blocked:', err);
+      }
+    }
+
+    function setAudioPlaybackRate(rate) {
+      if (audioPlayer) audioPlayer.playbackRate = rate;
+    }
+
+    function triggerNeedleDropSound() {
+      initWebAudio();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(95, now);
+      osc.frequency.exponentialRampToValueAtTime(28, now + 0.14);
+
+      gain.gain.setValueAtTime(0.9, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+
+    function triggerScratchSound(intensity = 0.5) {
+      initWebAudio();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sawtooth';
+      const startF = 380 + Math.random() * 380;
+      const endF = 190 + Math.random() * 550;
+      osc.frequency.setValueAtTime(startF, now);
+      osc.frequency.exponentialRampToValueAtTime(endF, now + 0.08);
+
+      gain.gain.setValueAtTime(Math.min(0.85, intensity * 0.9), now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1600;
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.12);
+    }
+
+    // Shelf Album Selection
+    window.loadAlbum = function(albumKey) {
+      document.querySelectorAll('.album-shelf-slot').forEach(s => s.classList.remove('active-album'));
+      const slot = document.getElementById(albumKey === 'nas' ? 'slotNas' : 'slotMobb');
+      if (slot) slot.classList.add('active-album');
+
+      if (labelMesh) {
+        labelMesh.material.color.setHex(albumKey === 'nas' ? 0xe5a953 : 0xaa2211);
+      }
+
+      const firstTrack = slot.querySelector('.track-row');
+      if (firstTrack) playTrack(firstTrack);
+    };
+
+    // Play next track automatically
+    window.playNextTrack = function() {
+      if (!currentTrackElement) {
+        const first = document.querySelector('.track-row');
+        if (first) playTrack(first);
+        return;
+      }
+      const allTracks = Array.from(document.querySelectorAll('.track-row'));
+      const currentIndex = allTracks.indexOf(currentTrackElement);
+      const nextIndex = (currentIndex + 1) % allTracks.length;
+      playTrack(allTracks[nextIndex]);
+    };
+
+    // Toggle Play/Pause Master
+    window.togglePlayPause = function() {
+      if (!audioPlayer.src) {
+        // Load default track
+        const first = document.querySelector('.track-row.now-playing') || document.querySelector('.track-row');
+        if (first) playTrack(first);
+        return;
+      }
+
+      if (audioPlayer.paused) {
+        initWebAudio();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+        audioPlayer.play().then(() => {
+          updatePlayUI(true);
+        }).catch(err => {
+          console.error('Play failed:', err);
+          statusMsgText.textContent = 'Erro ao tocar: clique diretamente na faixa.';
+        });
+      } else {
+        audioPlayer.pause();
+        updatePlayUI(false);
+      }
+    };
+
+    function updatePlayUI(isPlaying) {
+      deckState.rotating = isPlaying;
+      deckState.tonearmOnRecord = isPlaying;
+      deckState.targetArmY = isPlaying ? 0.44 : 0.0;
+
+      powerText.textContent = isPlaying ? 'PARAR PRATO' : 'LIGAR PRATO';
+      powerIcon.textContent = isPlaying ? '■' : '►';
+      btnPlatter.className = isPlaying ? 'deck-btn deck-btn-gold' : 'deck-btn deck-btn-dark';
+
+      masterPlayIcon.textContent = isPlaying ? '❚❚' : '►';
+      masterPlayText.textContent = isPlaying ? 'PAUSAR MÚSICA' : 'TOCAR MÚSICA';
+
+      if (vinylBadge) vinylBadge.classList.toggle('spinning', isPlaying);
+      if (isPlaying) {
+        audioDot.classList.remove('paused');
+        vuStateBadge.textContent = 'REPRODUZINDO';
+        vuStateBadge.style.color = 'var(--gold)';
+        statusMsgText.textContent = `▶ Tocando agora: ${currentSongTitle.textContent} (${currentArtistInfo.textContent})`;
+      } else {
+        audioDot.classList.add('paused');
+        vuStateBadge.textContent = 'PAUSADO';
+        vuStateBadge.style.color = 'var(--ink-3)';
+        statusMsgText.textContent = `❚❚ Pausado: ${currentSongTitle.textContent}`;
+      }
+    }
+
+    // Play Track Handler
+    window.playTrack = function(elem) {
+      document.querySelectorAll('.track-row').forEach(r => r.classList.remove('now-playing'));
+      elem.classList.add('now-playing');
+      currentTrackElement = elem;
+
+      const fileName = elem.dataset.file;
+      const title = elem.dataset.title;
+      const artist = elem.dataset.artist;
+      const album = elem.dataset.album;
+
+      currentSongTitle.textContent = title;
+      currentArtistInfo.textContent = `${artist} • ${album}`;
+      headerTrackTitle.textContent = `${artist} — ${title}`;
+
+      // Update thumbnail
+      const isNas = artist.toLowerCase().includes('nas');
+      playerThumb.src = isNas ? 'albun/R-226816-1450955646-4170.jpg' : 'albun/Mobbdeeptheinfamous1995.jpg';
+      playerThumb.onerror = () => {
+        playerThumb.src = isNas ? '../albun/R-226816-1450955646-4170.jpg' : '../albun/Mobbdeeptheinfamous1995.jpg';
+      };
+
+      // Set audio source with proper encoding and fallback
+      initWebAudio();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+      statusMsgText.textContent = `Carregando "${title}"...`;
+
+      // Try primary path first
+      const primaryPath = 'Musica/' + encodeURIComponent(fileName);
+      const fallbackPath = '../Musica/' + encodeURIComponent(fileName);
+
+      let triedFallback = false;
+      audioPlayer.onerror = (e) => {
+        if (!triedFallback) {
+          triedFallback = true;
+          console.warn(`Primary audio path failed (${audioPlayer.src}). Tentando fallback: ${fallbackPath}`);
+          audioPlayer.src = fallbackPath;
+          audioPlayer.play().catch(err => {
+            console.error('Playback error on fallback:', err);
+            statusMsgText.textContent = `Erro ao reproduzir arquivo. Verifique se o arquivo está na pasta Musica.`;
+          });
+        } else {
+          statusMsgText.textContent = `Não foi possível carregar: ${fileName}`;
+        }
+      };
+
+      audioPlayer.src = primaryPath;
+      triggerNeedleDropSound();
+
+      audioPlayer.play().then(() => {
+        updatePlayUI(true);
+      }).catch(err => {
+        console.warn('Playback error / gesture needed:', err);
+        statusMsgText.textContent = `Clique em "TOCAR MÚSICA" para iniciar o áudio de "${title}".`;
+      });
+    };
+
+    // Auto-advance to next track when finished
+    audioPlayer.addEventListener('ended', () => {
+      playNextTrack();
+    });
+
+    // Time Formatting
+    function formatTime(s) {
+      if (isNaN(s)) return '0:00';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+    }
+
+    audioPlayer.addEventListener('timeupdate', () => {
+      if (!isNaN(audioPlayer.duration) && audioPlayer.duration > 0) {
+        seekSlider.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        currTime.textContent = formatTime(audioPlayer.currentTime);
+        totTime.textContent = formatTime(audioPlayer.duration);
+      }
+    });
+
+    seekSlider.addEventListener('input', e => {
+      if (!isNaN(audioPlayer.duration) && audioPlayer.duration > 0) {
+        audioPlayer.currentTime = (e.target.value / 100) * audioPlayer.duration;
+      }
+    });
+
+    // Scratch pads
+    document.querySelectorAll('.scratch-pad-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.scratch;
+        if (type === 'baby') {
+          triggerScratchSound(0.5);
+          setTimeout(() => triggerScratchSound(0.4), 80);
+        } else if (type === 'chirp') {
+          triggerScratchSound(0.8);
+        } else {
+          triggerScratchSound(0.6);
+          setTimeout(() => triggerScratchSound(0.3), 60);
+          setTimeout(() => triggerScratchSound(0.6), 120);
+        }
+      });
+    });
+
+    // Crackle slider
+    const crackleSlider = document.getElementById('sliderCrackleVol');
+    const crackleLabel = document.getElementById('crackleLabel');
+    crackleSlider?.addEventListener('input', e => {
+      const val = e.target.value;
+      crackleLabel.textContent = val + '%';
+      if (crackleGainNode && audioCtx) {
+        crackleGainNode.gain.setValueAtTime(val / 100, audioCtx.currentTime);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // 5. Dynamic Audio Spectrum VU Meter Loop
+    // -------------------------------------------------------------------------
+    let vuPhase = 0;
+    function updateVuMeter() {
+      requestAnimationFrame(updateVuMeter);
+
+      if (audioPlayer.paused) {
+        for (let i = 0; i < 6; i++) {
+          const b = document.getElementById('specBar' + i);
+          if (b) b.style.height = '8px';
+        }
+        return;
+      }
+
+      vuPhase += 0.15;
+      const time = audioPlayer.currentTime;
+      // High-energy rhythmic audio reactivity based on time and beat frequency
+      for (let i = 0; i < 6; i++) {
+        const b = document.getElementById('specBar' + i);
+        if (b) {
+          const beat = Math.sin(time * (5 + i * 1.5)) * 0.5 + 0.5;
+          const groove = Math.cos(vuPhase * (1 + i * 0.4)) * 0.5 + 0.5;
+          const energy = (beat * 0.6 + groove * 0.4);
+          const h = Math.max(12, energy * 105 * (audioPlayer.volume || 1));
+          b.style.height = h + 'px';
+        }
+      }
+    }
+    updateVuMeter();
+
+    // Set initial track selection (ready to play)
+    window.addEventListener('DOMContentLoaded', () => {
+      const initialTrack = document.querySelector('.track-row.now-playing');
+      if (initialTrack) {
+        currentTrackElement = initialTrack;
+        const fileName = initialTrack.dataset.file;
+        audioPlayer.src = 'Musica/' + encodeURIComponent(fileName);
+        audioPlayer.onerror = () => {
+          audioPlayer.src = '../Musica/' + encodeURIComponent(fileName);
+        };
+      }
+    });
+  </script>
+</body>
+</html>
